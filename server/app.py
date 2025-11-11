@@ -52,6 +52,35 @@ class LostFoundReport(db.Model):
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=db.func.now())
 
+# Auto-create tables and sample data
+@app.before_first_request
+def initialize_database():
+    try:
+        db.create_all()
+        # Add sample pets if database is empty
+        if Pet.query.count() == 0:
+            init_sample_data()
+    except Exception as e:
+        print(f"Database initialization error: {e}")
+
+def init_sample_data():
+    """Initialize sample pets"""
+    try:
+        pets = [
+            Pet(name="Bruno", type="Dog", age=3, description="Friendly and loyal golden retriever who loves playing fetch", image="bruno.webp", adopted=False),
+            Pet(name="Chintu", type="Cat", age=2, description="Playful and curious tabby cat who enjoys cuddles and chasing toys", image="chintu.webp", adopted=False),
+            Pet(name="Coco", type="Bird", age=1, description="Talkative and cheerful parrot that loves to sing and mimic sounds", image="coco.webp", adopted=False),
+            Pet(name="Rocky", type="Rabbit", age=1, description="Gentle rabbit who loves carrots and hopping around in the garden", image="rocky.webp", adopted=False),
+            Pet(name="Tommy", type="Dog", age=4, description="Energetic and loving labrador, great with children and other pets", image="tommy.webp", adopted=False),
+            Pet(name="Milo", type="Cat", age=3, description="Independent and sweet siamese cat who enjoys quiet evenings", image="milo.webp", adopted=False),
+            Pet(name="Soni", type="Rabbit", age=2, description="Soft and cuddly dwarf rabbit, perfect for first-time pet owners", image="soni.webp", adopted=False)
+        ]
+        db.session.add_all(pets)
+        db.session.commit()
+        print("Sample pets added successfully")
+    except Exception as e:
+        print(f"Error adding sample data: {e}")
+
 # Serve HTML files from root directory
 @app.route('/')
 def serve_index():
@@ -63,14 +92,29 @@ def serve_pages(page):
         return send_from_directory('../', page)
     return "Page not found", 404
 
+# Serve CSS files
 @app.route('/style.css')
 def serve_css():
     return send_from_directory('../', 'style.css')
 
+# Serve JS files
 @app.route('/script.js')
 def serve_js():
     return send_from_directory('../', 'script.js')
 
+@app.route('/header.js')
+def serve_header_js():
+    return send_from_directory('../', 'header.js')
+
+@app.route('/auth.js')
+def serve_auth_js():
+    return send_from_directory('../', 'auth.js')
+
+@app.route('/translation.js')
+def serve_translation_js():
+    return send_from_directory('../', 'translation.js')
+
+# Serve static images from server/static folder
 @app.route('/static/images/<path:filename>')
 def serve_static_images(filename):
     return send_from_directory('static/images', filename)
@@ -78,19 +122,23 @@ def serve_static_images(filename):
 # API Routes
 @app.route('/api/pets', methods=['GET'])
 def get_pets():
-    pets = Pet.query.filter_by(adopted=False).all()
-    pet_list = [
-        {
-            "id": p.id, 
-            "name": p.name, 
-            "type": p.type, 
-            "age": f"{p.age} years",
-            "description": p.description, 
-            "image": f"/static/images/{p.image}" if p.image else "/static/images/default-pet.jpg"
-        }
-        for p in pets
-    ]
-    return jsonify(pet_list)
+    try:
+        pets = Pet.query.filter_by(adopted=False).all()
+        pet_list = [
+            {
+                "id": p.id, 
+                "name": p.name, 
+                "type": p.type, 
+                "age": f"{p.age} years",
+                "description": p.description, 
+                "image": f"/static/images/{p.image}" if p.image else "/static/images/default-pet.jpg"
+            }
+            for p in pets
+        ]
+        return jsonify(pet_list)
+    except Exception as e:
+        print(f"Error in get_pets: {e}")
+        return jsonify({"error": "Failed to load pets"}), 500
 
 @app.route('/api/adopt', methods=['POST'])
 def adopt_pet():
@@ -244,6 +292,7 @@ def lost_found_reports():
     ]
     return jsonify(report_list)
 
+# Additional pages
 @app.route('/volunteer')
 def volunteer_page():
     return send_from_directory('../', 'volunteer.html')
@@ -260,27 +309,33 @@ def init_data():
         Adoption.query.delete()
         db.session.commit()
 
-        pets = [
-            Pet(name="Bruno", type="Dog", age=3, description="Friendly and loyal golden retriever", image="bruno.webp", adopted=False),
-            Pet(name="Chintu", type="Cat", age=2, description="Playful and curious tabby cat", image="chintu.webp", adopted=False),
-            Pet(name="Coco", type="Bird", age=1, description="Talkative and cheerful parrot", image="coco.webp", adopted=False),
-            Pet(name="Rocky", type="Rabbit", age=1, description="Gentle rabbit who loves carrots", image="rocky.webp", adopted=False),
-            Pet(name="Tommy", type="Dog", age=4, description="Energetic and loving labrador", image="tommy.webp", adopted=False),
-            Pet(name="Milo", type="Cat", age=3, description="Independent and sweet siamese cat", image="milo.webp", adopted=False),
-            Pet(name="Soni", type="Rabbit", age=2, description="Soft and cuddly dwarf rabbit", image="soni.webp", adopted=False)
-        ]
-
-        db.session.add_all(pets)
-        db.session.commit()
+        init_sample_data()
         
+        pet_count = Pet.query.count()
         return jsonify({
             "message": "Database initialized successfully!",
-            "pets_added": len(pets)
+            "pets_added": pet_count
         })
 
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"Initialization failed: {str(e)}"}), 500
+
+@app.route('/api/health')
+def api_health():
+    try:
+        pet_count = Pet.query.count()
+        return jsonify({
+            "status": "healthy",
+            "database": "working", 
+            "total_pets": pet_count,
+            "message": f"API is running with {pet_count} pets in database"
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "unhealthy",
+            "error": str(e)
+        }), 500
 
 if __name__ == '__main__':
     with app.app_context():

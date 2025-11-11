@@ -5,8 +5,6 @@
   <title>🐾 Adopt a Pet | PetVerse</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
-  <script src="/translations.js"></script>
-  <script src="/auth.js"></script>
 </head>
 <body>
   <nav class="navbar">
@@ -55,7 +53,10 @@
   <script>
     const container = document.getElementById("pets-container");
     const toast = document.getElementById("toast");
-    const backendURL = "http://127.0.0.1:5000";
+    
+    // Use relative paths for deployed app - THIS IS THE FIX!
+    const backendURL = ""; // Empty string means same domain
+    
     let allPets = [];
 
     // Update login/logout links based on user state
@@ -121,8 +122,11 @@
         card.className = "pet-card";
         card.setAttribute('data-category', pet.type.toLowerCase());
 
+        // Use relative path for images too
+        const imagePath = pet.image.startsWith('/') ? pet.image : `/static/images/${pet.image}`;
+        
         card.innerHTML = `
-          <img src="${backendURL}${pet.image}" alt="${pet.name}" onerror="this.src='https://via.placeholder.com/300x200/8B5FBF/FFFFFF?text=Pet+Image'">
+          <img src="${imagePath}" alt="${pet.name}" onerror="this.src='https://via.placeholder.com/300x200/8B5FBF/FFFFFF?text=Pet+Image'">
           <div class="pet-card-content">
             <h3>${pet.name}</h3>
             <span class="type">${pet.type}</span>
@@ -145,7 +149,7 @@
           }
 
           try {
-            const res = await fetch(`${backendURL}/api/adopt`, {
+            const res = await fetch(`/api/adopt`, {  // Relative path
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ user_name: user, pet_id: petId })
@@ -169,7 +173,7 @@
 
     async function loadPets() {
       try {
-        const res = await fetch(`${backendURL}/api/pets`);
+        const res = await fetch(`/api/pets`);  // Relative path
         if (!res.ok) throw new Error(`Backend returned ${res.status}`);
         allPets = await res.json();
         displayPets(allPets);
@@ -184,55 +188,5 @@
       loadPets();
     });
   </script>
-  <!-- Include these in ALL pages -->
-<script src="/header.js"></script>
-<script src="/translations.js"></script>
-<div id="toast" class="toast"></div>
-
-<script>
-// Temporary fix - add this to every page until you create the separate files
-function updateAuthLinks() {
-    const user = localStorage.getItem("petpal_user");
-    const loginLink = document.getElementById("loginLink");
-    const logoutItem = document.getElementById("logoutItem");
-    const logoutLink = document.getElementById("logoutLink");
-
-    if (user && loginLink) {
-        loginLink.innerHTML = `Welcome, ${user} 👋`;
-        loginLink.style.color = "var(--accent)";
-        loginLink.href = "javascript:void(0)";
-        loginLink.onclick = () => showToast(`Already logged in as ${user}`);
-        
-        if (logoutItem && logoutLink) {
-            logoutItem.style.display = "block";
-            logoutLink.onclick = logout;
-        }
-    }
-}
-
-function logout() {
-    const user = localStorage.getItem("petpal_user");
-    localStorage.removeItem("petpal_user");
-    showToast(`Goodbye, ${user}! You have been logged out.`);
-    setTimeout(() => window.location.href = "index.html", 1500);
-}
-
-function showToast(message) {
-    let toast = document.getElementById("toast");
-    if (!toast) {
-        toast = document.createElement("div");
-        toast.id = "toast";
-        toast.className = "toast";
-        document.body.appendChild(toast);
-    }
-    toast.innerText = message;
-    toast.classList.add("show");
-    setTimeout(() => toast.classList.remove("show"), 3000);
-}
-
-document.addEventListener('DOMContentLoaded', updateAuthLinks);
-</script>
-<div id="toast" class="toast"></div>
-
 </body>
 </html>

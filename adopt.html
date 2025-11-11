@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>Adopt a Pet</title>
   <link rel="stylesheet" href="/style.css">
-  <script src="/translations.js"></script>
 </head>
 <body>
   <h1>Adoption Request Form</h1>
@@ -32,7 +31,8 @@
       const email = document.getElementById('email').value;
       const petId = document.getElementById('petId').value;
 
-      const response = await fetch('http://127.0.0.1:5000/adopt', {
+      // FIXED: Using relative path
+      const response = await fetch('/api/adopt', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ name, email, petId })
@@ -42,9 +42,5 @@
       document.getElementById('message').innerText = data.message || 'Request sent!';
     });
   </script>
-  <!-- Include these in ALL pages -->
-<script src="/header.js"></script>
-<script src="/translations.js"></script>
-<div id="toast" class="toast"></div>
 </body>
 </html>
